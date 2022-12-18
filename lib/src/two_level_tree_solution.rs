@@ -245,9 +245,9 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
 
         // \sqrt{N} 個くらいの segment に分割して登録
         let segment_size = (len as f64).sqrt().ceil() as usize;
-        let segment_capacity = segment_size * 3;
-        let mut segment_list = SegmentIDList::new(segment_capacity as u16);
-        let mut buffer = vec![Segment::<N>::new(); segment_capacity];
+        let segment_capacity = std::u16::MAX.min(10 * segment_size as u16);
+        let mut segment_list = SegmentIDList::new(segment_capacity);
+        let mut buffer = vec![Segment::<N>::new(); segment_capacity as usize];
 
         let mut node = 0;
         for iter in 0..segment_size {
@@ -401,7 +401,7 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
         // Segment 内で環状に接続されているわけではないため
         assert!(from_idx <= to_idx);
 
-        let len = (to_index.inner_id + 1).abs_diff(from_index.inner_id);
+        let len = to_idx + 1 - from_idx;
         for _iter in 0..len / 2 {
             self.buffer[segment_id as usize].swap(from_idx as usize, to_idx as usize);
             let from = self.buffer[segment_id as usize][from_idx as usize];
@@ -555,7 +555,6 @@ impl<const N: usize> Solution for TwoLeveltreeSolution<N> {
                 }
             }
         }
-        self.validate();
     }
 
     fn len(&self) -> usize {
@@ -700,12 +699,6 @@ mod tests {
             solution.swap(from, to);
             two_level_tree.swap(from, to);
 
-            eprintln!("========");
-            eprintln!("solution: ");
-            solution.print();
-            eprintln!("two level tree: ");
-            two_level_tree.print();
-
             // check
             let mut id = 0;
             for _iter in 0..SIZE {
@@ -781,6 +774,11 @@ mod tests {
     }
 
     #[test]
+    fn test_two_level_tree_case12() {
+        test_sequence(vec![(21, 1), (68, 82), (83, 53), (9, 51), (29, 24)]);
+    }
+
+    #[test]
     fn test_two_level_tree_random() {
         const SIZE: usize = 100;
 
@@ -789,13 +787,16 @@ mod tests {
 
         let mut rng = rand::thread_rng();
 
-        for _iter in 0..2000 {
-            eprintln!("{}", _iter);
+        let mut max_content = 0;
+
+        for _iter in 0..10_000 {
+            if max_content < two_level_tree.segment_list.content.len() as u16 {
+                eprintln!("used: {}", two_level_tree.segment_list.content.len());
+                max_content = two_level_tree.segment_list.content.len() as u16;
+            }
             let from = rng.gen_range(0..SIZE as u32);
             let to = rng.gen_range(0..SIZE as u32);
             if from != to {
-                eprintln!("from = {}, to = {}", from, to);
-
                 solution.swap(from, to);
                 two_level_tree.swap(from, to);
 
