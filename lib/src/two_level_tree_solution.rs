@@ -205,6 +205,22 @@ impl SegmentIDList {
     fn len(&self) -> usize {
         self.content.len()
     }
+
+    fn validate(&self) {
+        // content + free_list = capacity
+        assert_eq!(
+            self.content.len() + self.free_list.len(),
+            self.index_of.len()
+        );
+        for id in self.free_list.iter() {
+            assert!(self.index_of[*id as usize] == Self::NONE);
+        }
+        for id in self.content.iter() {
+            let idx = self.index_of[*id as usize];
+            assert!(idx != Self::NONE);
+            assert!(self.content[idx as usize] == *id);
+        }
+    }
 }
 
 #[derive(Clone, Copy, Default)]
@@ -385,7 +401,7 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
         // Segment 内で環状に接続されているわけではないため
         assert!(from_idx <= to_idx);
 
-        let len = to_index.inner_id + 1 - from_index.inner_id;
+        let len = (to_index.inner_id + 1).abs_diff(from_index.inner_id);
         for _iter in 0..len / 2 {
             self.buffer[segment_id as usize].swap(from_idx as usize, to_idx as usize);
             let from = self.buffer[segment_id as usize][from_idx as usize];
@@ -406,6 +422,10 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
         self.buffer[to_segment_id as usize].reversed ^= true;
 
         self.segment_list.swap(from_segment_id, to_segment_id);
+    }
+
+    fn validate(&self) {
+        self.segment_list.validate();
     }
 }
 
@@ -473,7 +493,8 @@ impl<const N: usize> Solution for TwoLeveltreeSolution<N> {
         {
             self.swap_in_segment(from, to);
         } else {
-            let from_segment = if self.buffer[from_segment as usize].front() == from {
+            // from_segment
+            let _ = if self.buffer[from_segment as usize].front() == from {
                 from_segment
             } else {
                 let (_, new_from_segment) = self.split(from);
@@ -492,30 +513,49 @@ impl<const N: usize> Solution for TwoLeveltreeSolution<N> {
                 new_to_segment
             };
 
+            // from の segment 作り変えによって生じうる to_segment の変化反映
+            let from_segment = self.index_of[from as usize].segment_id;
+
             self.swap_aligned(from_segment, to_segment);
 
             // [..., prev_from, from_segment, ..., to_segment, next_to, ...]
             // -> [..., prev_from, to_segment, ..., from_segment, next_to, ...]
             // from, to の segment size が小さすぎたら、それぞれ merge
             let merge_threashold = (self.len() as f64).sqrt().ceil() as usize / 2;
-            for segment_id in [from_segment, to_segment] {
+            {
+                let segment_id = from_segment;
                 if self.buffer[segment_id as usize].len() < merge_threashold {
                     let prev = self.segment_list.prev(segment_id);
                     let prev_len = self.buffer[prev as usize].len();
                     let next = self.segment_list.next(segment_id);
                     let next_len = self.buffer[next as usize].len();
                     if prev_len < next_len {
-                        if prev_len < merge_threashold {
-                            self.merge_right(prev);
-                        }
+                        self.merge_right(prev);
                     } else {
-                        if next_len < merge_threashold {
-                            self.merge_right(segment_id);
-                        }
+                        self.merge_right(segment_id);
+                    }
+                }
+            }
+
+            // from の segment 作り変えによって生じうる to_segment の変化反映
+            // from を merge することで to_segment が消滅する可能性を配慮して、再計算
+            let to_segment = self.index_of[to as usize].segment_id;
+            {
+                let segment_id = to_segment;
+                if self.buffer[segment_id as usize].len() < merge_threashold {
+                    let prev = self.segment_list.prev(segment_id);
+                    let prev_len = self.buffer[prev as usize].len();
+                    let next = self.segment_list.next(segment_id);
+                    let next_len = self.buffer[next as usize].len();
+                    if prev_len < next_len {
+                        self.merge_right(prev);
+                    } else {
+                        self.merge_right(segment_id);
                     }
                 }
             }
         }
+        self.validate();
     }
 
     fn len(&self) -> usize {
@@ -721,6 +761,23 @@ mod tests {
         assert_eq!(two_level_tree.next(28), 27);
         assert_eq!(two_level_tree.prev(27), 28);
         assert_eq!(two_level_tree.next(27), 26);
+    }
+
+    #[test]
+    fn test_two_level_tree_case10() {
+        test_sequence(vec![
+            (7, 94),
+            (64, 17),
+            (51, 95),
+            (48, 47),
+            (51, 79),
+            (29, 30),
+        ]);
+    }
+
+    #[test]
+    fn test_two_level_tree_case11() {
+        test_sequence(vec![(46, 83), (99, 3)])
     }
 
     #[test]
