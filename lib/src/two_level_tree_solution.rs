@@ -229,7 +229,7 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
 
         // \sqrt{N} 個くらいの segment に分割して登録
         let segment_size = (len as f64).sqrt().ceil() as usize;
-        let segment_capacity = segment_size * 2;
+        let segment_capacity = segment_size * 3;
         let mut segment_list = SegmentIDList::new(segment_capacity as u16);
         let mut buffer = vec![Segment::<N>::new(); segment_capacity];
 
@@ -276,8 +276,14 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
         let segment_id = index.segment_id;
         let new_segment_id = self.segment_list.acquire_free_segment_id();
 
+        // reverse == true の時、仮想的に末尾に id を含めるためには、物理的に先頭に id を含める必要がある
+        let offset = if self.buffer[segment_id as usize].reversed {
+            1
+        } else {
+            0
+        };
         // 物理的に front / back にあるという意味であることに注意
-        let front_segment_size = index.inner_id;
+        let front_segment_size = index.inner_id + offset;
         let all_segment_size = self.buffer[segment_id as usize].len() as u16;
         let back_segment_size = all_segment_size - front_segment_size;
 
@@ -346,6 +352,7 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
                 self.index_of[id as usize].segment_id = next_segment_id as u16;
                 self.index_of[id as usize].inner_id = (i + offset) as u16;
             }
+            self.buffer[next_segment_id].index += self.buffer[segment_id].len();
             self.segment_list.remove(segment_id as u16);
             next_segment_id as u16
         } else {
@@ -357,6 +364,7 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
                 self.index_of[id as usize].segment_id = segment_id as u16;
                 self.index_of[id as usize].inner_id = (i + offset) as u16;
             }
+            self.buffer[segment_id].index += self.buffer[next_segment_id].len();
             self.segment_list.remove(next_segment_id as u16);
             segment_id as u16
         }
@@ -459,17 +467,24 @@ impl<const N: usize> Solution for TwoLeveltreeSolution<N> {
         let from_segment = self.index_of[from as usize].segment_id;
         let to_segment = self.index_of[to as usize].segment_id;
 
-        if from_segment == to_segment {
+        if from_segment == to_segment
+            && ((self.index_of[from as usize].inner_id < self.index_of[to as usize].inner_id)
+                ^ self.buffer[from_segment as usize].reversed)
+        {
             self.swap_in_segment(from, to);
         } else {
-            let from_segment = if from == self.buffer[from_segment as usize].front() {
+            let from_segment = if self.buffer[from_segment as usize].front() == from {
                 from_segment
             } else {
                 let (_, new_from_segment) = self.split(from);
                 new_from_segment
             };
 
-            let to_segment = if to == self.buffer[to_segment as usize].back() {
+            // from の segment 作り変えによって生じうる to_segment の変化反映
+            let to_segment = self.index_of[to as usize].segment_id;
+
+            // 物理的に末尾にない場合は流用できないので、split
+            let to_segment = if self.buffer[to_segment as usize].back() == to {
                 to_segment
             } else {
                 // [..., prev, to, next, ...] -> [..., prev, to], [next, ...]
@@ -577,6 +592,8 @@ mod tests {
         }
 
         two_level_tree.swap(from, to);
+        two_level_tree.print();
+
         assert_eq!(two_level_tree.prev(from - 1), from - 2);
         assert_eq!(two_level_tree.next(from - 1), to);
         assert_eq!(two_level_tree.prev(to), from - 1);
@@ -633,34 +650,77 @@ mod tests {
         check(10, 24);
     }
 
-    #[test]
-    fn test_two_level_tree_case6() {
+    fn test_sequence(arg_list: Vec<(u32, u32)>) {
         const SIZE: usize = 100;
 
         let mut solution = ArraySolution::new(SIZE);
         let mut two_level_tree = TwoLeveltreeSolution::<30>::new(&solution);
 
-        for (from, to) in [(91, 47), (10, 98)] {
+        for (from, to) in arg_list.into_iter() {
             solution.swap(from, to);
             two_level_tree.swap(from, to);
+
+            eprintln!("========");
+            eprintln!("solution: ");
+            solution.print();
+            eprintln!("two level tree: ");
+            two_level_tree.print();
 
             // check
             let mut id = 0;
             for _iter in 0..SIZE {
                 let next_sol = solution.next(id);
                 let next_two_level_tree = two_level_tree.next(id);
-                eprintln!("id = {}", id);
-                eprintln!(
-                    "    [prev] sol: {}, tlt: {}",
-                    solution.prev(id),
-                    two_level_tree.prev(id)
-                );
-                eprintln!("    [next] sol: {}, tlt: {}", next_sol, next_two_level_tree);
                 assert_eq!(next_sol, next_two_level_tree);
                 assert_eq!(solution.prev(id), two_level_tree.prev(id));
                 id = next_sol;
             }
         }
+    }
+
+    #[test]
+    fn test_two_level_tree_case6() {
+        // [0, ..., 99]
+        // -> [0, 99, 98, 97, ..., 91, 48, 49, ..., 90, 47, 46, ..., 11, 10, 9, ..., 2, 1]
+        // -> [0, 1, 2, ..., 9, 10, 97, ..., 91, 48, 49, ..., 90, 47, ..., 11, 98, 99]
+        test_sequence(vec![(91, 47), (10, 98)]);
+    }
+
+    #[test]
+    fn test_two_level_tree_case7() {
+        test_sequence(vec![(35, 37), (7, 37)]);
+    }
+
+    #[test]
+    fn test_two_level_tree_case8() {
+        check(58, 18);
+    }
+
+    #[test]
+    fn test_two_level_tree_case9() {
+        const SIZE: usize = 100;
+        let solution = ArraySolution::new(SIZE);
+        let mut two_level_tree = TwoLeveltreeSolution::<30>::new(&solution);
+
+        for i in 0..SIZE {
+            let expected = (i + 1) % SIZE;
+            assert_eq!(two_level_tree.next(i as u32), expected as u32);
+
+            let expected = (i + SIZE - 1) % SIZE;
+            assert_eq!(two_level_tree.prev(i as u32), expected as u32);
+        }
+
+        // [..., 27, 28, 29, 30, ...]
+        // -> [..., 30, 29, 28, 27, ...]
+        two_level_tree.swap(29, 28);
+        assert_eq!(two_level_tree.prev(30), 31);
+        assert_eq!(two_level_tree.next(30), 29);
+        assert_eq!(two_level_tree.prev(29), 30);
+        assert_eq!(two_level_tree.next(29), 28);
+        assert_eq!(two_level_tree.prev(28), 29);
+        assert_eq!(two_level_tree.next(28), 27);
+        assert_eq!(two_level_tree.prev(27), 28);
+        assert_eq!(two_level_tree.next(27), 26);
     }
 
     #[test]
@@ -687,13 +747,6 @@ mod tests {
                 for _iter in 0..SIZE {
                     let next_sol = solution.next(id);
                     let next_two_level_tree = two_level_tree.next(id);
-                    eprintln!("id = {}", id);
-                    eprintln!(
-                        "    [prev] sol: {}, tlt: {}",
-                        solution.prev(id),
-                        two_level_tree.prev(id)
-                    );
-                    eprintln!("    [next] sol: {}, tlt: {}", next_sol, next_two_level_tree);
                     assert_eq!(next_sol, next_two_level_tree);
                     assert_eq!(solution.prev(id), two_level_tree.prev(id));
                     id = next_sol;

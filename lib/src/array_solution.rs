@@ -54,9 +54,9 @@ impl Solution for ArraySolution {
         let mut to_index = self.index_of[to as usize] as usize;
 
         let range_size = if from_index <= to_index {
-            to_index - from_index
+            to_index + 1 - from_index
         } else {
-            to_index + self.len() - from_index
+            to_index + 1 + self.len() - from_index
         };
 
         for _iter in 0..(range_size / 2) {

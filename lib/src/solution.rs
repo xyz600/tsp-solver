@@ -10,4 +10,14 @@ pub trait Solution {
     fn swap(&mut self, from: u32, to: u32);
 
     fn len(&self) -> usize;
+
+    fn print(&self) {
+        let mut id = 0;
+        eprint!("[");
+        for _iter in 0..self.len() {
+            eprint!("{}, ", id);
+            id = self.next(id);
+        }
+        eprintln!("]");
+    }
 }
