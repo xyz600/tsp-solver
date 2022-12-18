@@ -521,7 +521,7 @@ impl<const N: usize> Solution for TwoLeveltreeSolution<N> {
             // [..., prev_from, from_segment, ..., to_segment, next_to, ...]
             // -> [..., prev_from, to_segment, ..., from_segment, next_to, ...]
             // from, to の segment size が小さすぎたら、それぞれ merge
-            let merge_threashold = (self.len() as f64).sqrt().ceil() as usize / 2;
+            let merge_threashold = (self.len() as f64).sqrt().ceil() as usize;
             {
                 let segment_id = from_segment;
                 if self.buffer[segment_id as usize].len() < merge_threashold {
