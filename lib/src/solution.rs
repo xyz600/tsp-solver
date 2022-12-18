@@ -1,11 +1,13 @@
 pub trait Solution {
-    fn prev(&self, id: usize) -> usize;
+    fn prev(&self, id: u32) -> u32;
 
-    fn next(&self, id: usize) -> usize;
+    fn next(&self, id: u32) -> u32;
 
     // whether id is in [from, to]
-    fn between(&self, id: usize, from: usize, to: usize) -> bool;
+    fn between(&self, id: u32, from: u32, to: u32) -> bool;
 
     // swap range [from, to]
-    fn swap(&mut self, from: usize, to: usize);
+    fn swap(&mut self, from: u32, to: u32);
+
+    fn len(&self) -> usize;
 }

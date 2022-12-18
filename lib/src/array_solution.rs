@@ -1,15 +1,15 @@
 use crate::solution::Solution;
 
 pub struct ArraySolution {
-    content: Vec<usize>,
-    index_of: Vec<usize>,
+    content: Vec<u32>,
+    index_of: Vec<u32>,
 }
 
 impl ArraySolution {
     pub fn new(dimension: usize) -> ArraySolution {
         ArraySolution {
-            content: (0..dimension).collect(),
-            index_of: (0..dimension).collect(),
+            content: (0..dimension as u32).collect(),
+            index_of: (0..dimension as u32).collect(),
         }
     }
 
@@ -19,17 +19,17 @@ impl ArraySolution {
 }
 
 impl Solution for ArraySolution {
-    fn prev(&self, id: usize) -> usize {
-        let index = self.index_of[id];
+    fn prev(&self, id: u32) -> u32 {
+        let index = self.index_of[id as usize];
         if index == 0 {
             self.content[self.len() - 1]
         } else {
-            self.content[index - 1]
+            self.content[index as usize - 1]
         }
     }
 
-    fn next(&self, id: usize) -> usize {
-        let index = self.index_of[id];
+    fn next(&self, id: u32) -> u32 {
+        let index = self.index_of[id as usize] as usize;
         if index == self.len() - 1 {
             self.content[0]
         } else {
@@ -37,10 +37,10 @@ impl Solution for ArraySolution {
         }
     }
 
-    fn between(&self, id: usize, from: usize, to: usize) -> bool {
-        let id_index = self.index_of[id];
-        let from_index = self.index_of[from];
-        let to_index = self.index_of[to];
+    fn between(&self, id: u32, from: u32, to: u32) -> bool {
+        let id_index = self.index_of[id as usize];
+        let from_index = self.index_of[from as usize];
+        let to_index = self.index_of[to as usize];
         if from_index <= to_index {
             from_index <= id_index && id_index <= to_index
         } else {
@@ -49,9 +49,9 @@ impl Solution for ArraySolution {
         }
     }
 
-    fn swap(&mut self, from: usize, to: usize) {
-        let mut from_index = self.index_of[from];
-        let mut to_index = self.index_of[to];
+    fn swap(&mut self, from: u32, to: u32) {
+        let mut from_index = self.index_of[from as usize] as usize;
+        let mut to_index = self.index_of[to as usize] as usize;
 
         let range_size = if from_index <= to_index {
             to_index - from_index
@@ -60,8 +60,8 @@ impl Solution for ArraySolution {
         };
 
         for _iter in 0..(range_size / 2) {
-            let from = self.content[from_index];
-            let to = self.content[to_index];
+            let from = self.content[from_index] as usize;
+            let to = self.content[to_index] as usize;
             self.index_of.swap(from, to);
             self.content.swap(from_index, to_index);
             from_index = if from_index == self.len() - 1 {
@@ -75,6 +75,10 @@ impl Solution for ArraySolution {
                 to_index - 1
             };
         }
+    }
+
+    fn len(&self) -> usize {
+        self.content.len()
     }
 }
 
