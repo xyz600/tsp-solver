@@ -26,11 +26,10 @@ impl NeighborTable {
                 distance_list
                     .iter()
                     .take(neighbor_size)
-                    .map(|(dist, index)| *index)
+                    .map(|(_, index)| *index)
                     .collect()
             })
             .collect();
-
         NeighborTable { table }
     }
 

@@ -1,5 +1,6 @@
 pub mod array_solution;
 pub mod distance;
+pub mod euclid_distance;
 mod intset;
 pub mod lkh;
 mod neighbor_table;

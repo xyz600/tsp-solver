@@ -18,7 +18,7 @@ impl IntSet {
     }
 
     pub fn set_all(&mut self) {
-        for i in 0..self.len() {
+        for i in 0..self.capacity() {
             self.push(i as u32);
         }
     }
@@ -28,23 +28,26 @@ impl IntSet {
     }
 
     pub fn contains(&self, id: u32) -> bool {
-        self.index_of[id as usize] == Self::NONE
+        self.index_of[id as usize] != Self::NONE
     }
 
     pub fn push(&mut self, id: u32) {
-        if !self.contains(id) {
-            self.array[self.index] = id;
-            self.index_of[id as usize] = self.index as u32;
-            self.index += 1;
+        if self.contains(id) {
+            return;
         }
+        self.array[self.index] = id;
+        self.index_of[id as usize] = self.index as u32;
+        self.index += 1;
     }
 
     pub fn remove(&mut self, id: u32) {
-        assert!(self.index_of[id as usize] != Self::NONE);
         assert!(!self.is_empty());
+        assert!(self.contains(id));
+
         let id_index = self.index_of[id as usize];
         let last_id = self.array[self.index - 1];
-        self.array[id_index as usize] = self.array[self.index - 1];
+        self.array[id_index as usize] = last_id;
+
         self.index_of[last_id as usize] = id_index;
         self.index_of[id as usize] = Self::NONE;
         self.index -= 1;
@@ -52,10 +55,15 @@ impl IntSet {
 
     pub fn random_select(&mut self, rng: &mut ThreadRng) -> u32 {
         assert!(!self.is_empty());
-        rng.gen_range(0..self.index as u32)
+        let index = rng.gen_range(0..self.index);
+        self.array[index]
     }
 
     pub fn len(&self) -> usize {
         self.index
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.array.len()
     }
 }
