@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use crate::distance::DistanceFunction;
@@ -12,6 +14,8 @@ impl NeighborTable {
         neighbor_size: usize,
     ) -> NeighborTable {
         let n = distance.dimension();
+        eprintln!("start to calculate neighbor table");
+        let start = Instant::now();
 
         let table = (0..n)
             .into_par_iter()
@@ -30,6 +34,10 @@ impl NeighborTable {
                     .collect()
             })
             .collect();
+        eprintln!("finish to calculate neighbor table");
+        let elapsed = (Instant::now() - start).as_millis();
+        eprintln!("elapsed: {}[ms]", elapsed);
+
         NeighborTable { table }
     }
 

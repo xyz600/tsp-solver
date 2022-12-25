@@ -1,4 +1,5 @@
 pub mod array_solution;
+mod bitset;
 pub mod distance;
 pub mod euclid_distance;
 mod intset;

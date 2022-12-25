@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use clap::Parser;
-use lib::{euclid_distance::EuclidDistance, opt2::solve};
+use lib::{euclid_distance::EuclidDistance, opt2, opt3};
 
 #[derive(Parser)]
 struct Argument {
@@ -11,5 +11,6 @@ struct Argument {
 fn main() {
     let args = Argument::parse();
     let distance = EuclidDistance::load_tsplib(&args.problem_path);
-    let solution = solve(&distance);
+    // let solution = opt2::solve(&distance);
+    let solution = opt3::solve(&distance);
 }

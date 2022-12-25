@@ -36,13 +36,10 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
         let mut best_gain = 0;
         let mut best_c = 0;
 
-        for c in neighbor_table.neighbor_list(a).iter() {
+        for c in neighbor_table.neighbor_list(a) {
             let c = *c;
-            if c == a || c == b {
-                continue;
-            }
             let d = tlt.next(c);
-            if a == d || b == d {
+            if a == d || b == c || b == d {
                 continue;
             }
 
