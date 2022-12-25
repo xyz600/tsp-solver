@@ -28,7 +28,8 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
     let solution = ArraySolution::new(distance.dimension() as usize);
     let n = solution.len();
 
-    let mut tlt = TwoLeveltreeSolution::<1000>::new(&solution);
+    // let mut tlt = TwoLeveltreeSolution::<1000>::new(&solution);
+    let mut tlt = ArraySolution::new(n);
 
     let neighbor_table = NeighborTable::new(distance, 50);
     let mut rng = rand::thread_rng();
@@ -78,76 +79,95 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
 
                             let dist = |i1, i2| distance.distance(i1, i2);
 
+                            let (ca, cb, cc, cd, ce, cf) = if tlt.between(c, a, e) {
+                                (a, b, c, d, e, f)
+                            } else {
+                                (a, b, e, f, c, d)
+                            };
+
+                            eprintln!("----");
+                            tlt.print();
+                            let seq = [a, b, c, d, e, f];
+                            eprintln!("{:?}", seq);
+                            for i in 0..6 {
+                                let pi = (i + 5) % 6;
+                                let ni = (i + 1) % 6;
+                                eprintln!("{}, {}, {}", seq[pi], seq[i], seq[ni]);
+                                assert!(tlt.between(seq[i], seq[pi], seq[ni]));
+                            }
+
                             // case 1
                             // [(a, b), (c, d)] -> [(a, c), (b, d)]
-                            let gain1 = dist(a, b) + dist(c, d) - dist(a, c) - dist(b, d);
+                            let gain1 = dist(ca, cb) + dist(cc, cd) - dist(ca, cc) - dist(cb, cd);
                             if gain1 > best_gain {
                                 best_gain = gain1;
-                                best_pat = NeighborPattern::Pat1((b, c))
+                                best_pat = NeighborPattern::Pat1((cb, cc))
                             }
 
                             // case 2
                             // [(c, d), (e, f)] -> [(c, e), (d, f)]
-                            let gain2 = dist(c, d) + dist(e, f) - dist(c, e) - dist(d, f);
+                            let gain2 = dist(cc, cd) + dist(ce, cf) - dist(cc, ce) - dist(cd, cf);
                             if gain2 > best_gain {
                                 best_gain = gain2;
-                                best_pat = NeighborPattern::Pat1((d, e));
+                                best_pat = NeighborPattern::Pat1((cd, ce));
                             }
 
                             // case 3
                             // [(a, b), (e, f)] -> [(a, e), (b, f)]
-                            let gain3 = dist(a, b) + dist(e, f) - dist(a, e) - dist(b, f);
+                            let gain3 = dist(ca, cb) + dist(ce, cf) - dist(ca, ce) - dist(cb, cf);
                             if gain3 > best_gain {
                                 best_gain = gain3;
-                                best_pat = NeighborPattern::Pat1((f, a));
+                                best_pat = NeighborPattern::Pat1((cf, ca));
                             }
 
                             // case 4
                             // [(a, b), (c, d), (e, f)] -> [(a, c), (b, e), (d, f)]
                             // [(a, b), (c, d), (e, f)] -> [(a, c), (b, d), (e, f)] -> [(a, c), (b, e), (d, f)]
-                            let gain4 = dist(a, b) + dist(c, d) + dist(e, f)
-                                - dist(a, c)
-                                - dist(b, e)
-                                - dist(d, f);
+                            let gain4 = dist(ca, cb) + dist(cc, cd) + dist(ce, cf)
+                                - dist(ca, cc)
+                                - dist(cb, ce)
+                                - dist(cd, cf);
                             if gain4 > best_gain {
                                 best_gain = gain4;
-                                best_pat = NeighborPattern::Pat2((b, c), (d, e));
+                                best_pat = NeighborPattern::Pat2((cb, cc), (cd, ce));
                             }
 
-                            // case 5
-                            // [(a, b), (c, d), (e, f)] -> [(a, e), (d, b), (c, f)]
-                            // [(a, b), (c, d), (e, f)] -> [(a, c), (b, d), (e, f)] -> [(a, e), (d, b), (c, f)]
-                            let gain5 = dist(a, b) + dist(c, d) + dist(e, f)
-                                - dist(a, e)
-                                - dist(d, b)
-                                - dist(c, f);
-                            if gain5 > best_gain {
-                                best_gain = gain5;
-                                best_pat = NeighborPattern::Pat2((b, c), (c, e));
-                            }
+                            if false {
+                                // case 5
+                                // [(a, b), (c, d), (e, f)] -> [(a, e), (d, b), (c, f)]
+                                // [(a, b), (c, d), (e, f)] -> [(a, e), (d, c), (b, f)] -> [(a, e), (d, b), (c, f)]
+                                let gain5 = dist(ca, cb) + dist(cc, cd) + dist(ce, cf)
+                                    - dist(ca, ce)
+                                    - dist(cd, cb)
+                                    - dist(cc, cf);
+                                if gain5 > best_gain {
+                                    best_gain = gain5;
+                                    best_pat = NeighborPattern::Pat2((cb, ce), (cc, cb));
+                                }
 
-                            // case 6
-                            // [(a, b), (c, d), (e, f)] -> [(a, d), (e, c), (b, f)]
-                            // [(a, b), (c, d), (e, f)] -> [(a, e), (d, c), (b, f)] -> [(a, d), (e, c), (b, f)]
-                            let gain6 = dist(a, b) + dist(c, d) + dist(e, f)
-                                - dist(a, d)
-                                - dist(e, c)
-                                - dist(b, f);
-                            if gain6 > best_gain {
-                                best_gain = gain6;
-                                best_pat = NeighborPattern::Pat2((b, e), (e, d));
-                            }
+                                // case 6
+                                // [(a, b), (c, d), (e, f)] -> [(a, d), (e, c), (b, f)]
+                                // [(a, b), (c, d), (e, f)] -> [(a, e), (d, c), (b, f)] -> [(a, d), (e, c), (b, f)]
+                                let gain6 = dist(ca, cb) + dist(cc, cd) + dist(ce, cf)
+                                    - dist(ca, cd)
+                                    - dist(ce, cc)
+                                    - dist(cb, cf);
+                                if gain6 > best_gain {
+                                    best_gain = gain6;
+                                    best_pat = NeighborPattern::Pat2((cb, ce), (ce, cd));
+                                }
 
-                            // case 7
-                            // [(a, b), (c, d), (e, f)] -> [(a, d), (e, b), (c, f)]
-                            // [(a, b), (c, d), (e, f)] -> [(a, e), (d, c), (b, f)] -> [(a, d), (e, c), (b, f)] -> [(a, d), (e, b), (c, f)]
-                            let gain7 = dist(a, b) + dist(c, d) + dist(e, f)
-                                - dist(a, d)
-                                - dist(e, b)
-                                - dist(c, f);
-                            if gain7 > best_gain {
-                                best_gain = gain7;
-                                best_pat = NeighborPattern::Pat3((b, e), (e, d), (c, b));
+                                // case 7
+                                // [(a, b), (c, d), (e, f)] -> [(a, d), (e, b), (c, f)]
+                                // [(a, b), (c, d), (e, f)] -> [(a, e), (d, c), (b, f)] -> [(a, d), (e, c), (b, f)] -> [(a, d), (e, b), (c, f)]
+                                let gain7 = dist(ca, cb) + dist(cc, cd) + dist(ce, cf)
+                                    - dist(ca, cd)
+                                    - dist(ce, cb)
+                                    - dist(cc, cf);
+                                if gain7 > best_gain {
+                                    best_gain = gain7;
+                                    best_pat = NeighborPattern::Pat3((cb, ce), (ce, cd), (cc, cb));
+                                }
                             }
 
                             selected.clear(e);
@@ -164,38 +184,48 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
             selected.clear(b);
         }
 
-        if best_gain > 0 {
-            // swap
-            match best_pat {
-                NeighborPattern::None => unreachable!(),
-                NeighborPattern::Pat1((i1, i2)) => {
-                    tlt.swap(i1, i2);
-                    for i in [i1, i2] {
-                        dlb.push(i);
-                    }
-                    eval -= best_gain;
-                }
-                NeighborPattern::Pat2((i1, i2), (i3, i4)) => {
-                    tlt.swap(i1, i2);
-                    tlt.swap(i3, i4);
-                    for i in [i1, i2, i3, i4] {
-                        dlb.push(i);
-                    }
-                    eval -= best_gain;
-                }
-                NeighborPattern::Pat3((i1, i2), (i3, i4), (i5, i6)) => {
-                    tlt.swap(i1, i2);
-                    tlt.swap(i3, i4);
-                    tlt.swap(i5, i6);
-                    for i in [i1, i2, i3, i4, i5, i6] {
-                        dlb.push(i);
-                    }
-                    eval -= best_gain;
-                }
+        // swap
+        match best_pat {
+            NeighborPattern::None => {
+                dlb.remove(a);
             }
-        } else {
-            dlb.remove(a);
+            NeighborPattern::Pat1((i1, i2)) => {
+                tlt.swap(i1, i2);
+                for i in [i1, i2] {
+                    dlb.push(i);
+                }
+                eval -= best_gain;
+            }
+            NeighborPattern::Pat2((i1, i2), (i3, i4)) => {
+                tlt.swap(i1, i2);
+                tlt.swap(i3, i4);
+                for i in [i1, i2, i3, i4] {
+                    dlb.push(i);
+                }
+                eval -= best_gain;
+            }
+            NeighborPattern::Pat3((i1, i2), (i3, i4), (i5, i6)) => {
+                tlt.swap(i1, i2);
+                tlt.swap(i3, i4);
+                tlt.swap(i5, i6);
+                for i in [i1, i2, i3, i4, i5, i6] {
+                    dlb.push(i);
+                }
+                eval -= best_gain;
+            }
         }
+
+        let after_eval = evaluate(distance, &tlt);
+        eprintln!("---");
+        eprintln!("pat: {:?}", best_pat);
+        eprintln!(
+            "eval: {} -> {} (gain = {}), re-eval: = {}",
+            (eval + best_gain),
+            eval,
+            best_gain,
+            after_eval
+        );
+        assert_eq!(eval, after_eval);
 
         if iter % (n / 100) == 0 || dlb.is_empty() {
             eprintln!("iter = {}, eval = {}", iter, eval);

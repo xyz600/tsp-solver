@@ -786,7 +786,6 @@ mod tests {
         let mut two_level_tree = TwoLeveltreeSolution::<30>::new(&solution);
 
         let mut rng = rand::thread_rng();
-
         let mut max_content = 0;
 
         for _iter in 0..10_000 {
@@ -811,5 +810,19 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_between() {
+        const SIZE: usize = 100;
+        let solution = ArraySolution::new(SIZE);
+        let two_level_tree = TwoLeveltreeSolution::<30>::new(&solution);
+
+        assert!(two_level_tree.between(3, 1, 5));
+        assert!(!two_level_tree.between(1, 3, 5));
+        assert!(!two_level_tree.between(1, 3, 30));
+        assert!(two_level_tree.between(80, 50, 20));
+        assert!(two_level_tree.between(59, 55, 20));
+        assert!(two_level_tree.between(15, 55, 20));
     }
 }

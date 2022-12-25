@@ -44,8 +44,9 @@ impl Solution for ArraySolution {
         if from_index <= to_index {
             from_index <= id_index && id_index <= to_index
         } else {
-            // id -> to -> from の順になっていれば ok
-            id_index <= to_index && to_index <= from_index
+            // (id -> to -> from) || (to -> from -> id) の順になっていれば ok
+            (id_index <= to_index && to_index <= from_index)
+                || (to_index <= id_index && from_index <= id_index)
         }
     }
 
