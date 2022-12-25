@@ -28,8 +28,7 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
     let solution = ArraySolution::new(distance.dimension() as usize);
     let n = solution.len();
 
-    // let mut tlt = TwoLeveltreeSolution::<1000>::new(&solution);
-    let mut tlt = ArraySolution::new(n);
+    let mut tlt = TwoLeveltreeSolution::<1000>::new(&solution);
 
     let neighbor_table = NeighborTable::new(distance, 50);
     let mut rng = rand::thread_rng();

@@ -411,7 +411,12 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
     fn inner_index(&self, id: u32) -> (u16, u16) {
         let index = self.index_of[id as usize];
         let segment_index = self.segment_list.index_of(index.segment_id);
-        (segment_index, index.inner_id)
+        let exact_inner_index = if self.buffer[index.segment_id as usize].reversed {
+            self.buffer[index.segment_id as usize].len() as u16 - 1 - index.inner_id
+        } else {
+            index.inner_id
+        };
+        (segment_index, exact_inner_index)
     }
 
     fn validate(&self) {
@@ -835,6 +840,28 @@ mod tests {
                     assert_eq!(solution.between(i, j, k), two_level_tree.between(i, j, k));
                 }
             }
+        }
+    }
+
+    #[test]
+    fn test_between3() {
+        const SIZE: usize = 101;
+        let mut solution = ArraySolution::new(SIZE);
+        let mut two_level_tree = TwoLeveltreeSolution::<30>::new(&solution);
+
+        for iter in 1..=SIZE {
+            for i in 0..SIZE as u32 {
+                for j in 0..SIZE as u32 {
+                    for k in 0..SIZE as u32 {
+                        assert_eq!(solution.between(i, j, k), two_level_tree.between(i, j, k));
+                    }
+                }
+            }
+            let from = ((iter * 12434121) % SIZE) as u32;
+            let to = ((iter * 121343425) % (SIZE - 1)) as u32;
+            let to = if from == to { to + 1 } else { to };
+            solution.swap(from, to);
+            two_level_tree.swap(from, to);
         }
     }
 }
