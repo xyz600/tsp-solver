@@ -55,6 +55,7 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
             selected.set(a);
             selected.set(b);
 
+            // a-c をくっつけるとよさそう
             for c in neighbor_table.neighbor_list(a) {
                 let c_next = tlt.next(*c);
                 let c_prev = tlt.prev(*c);
@@ -85,17 +86,6 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
                                 (a, b, e, f, c, d)
                             };
 
-                            eprintln!("----");
-                            tlt.print();
-                            let seq = [a, b, c, d, e, f];
-                            eprintln!("{:?}", seq);
-                            for i in 0..6 {
-                                let pi = (i + 5) % 6;
-                                let ni = (i + 1) % 6;
-                                eprintln!("{}, {}, {}", seq[pi], seq[i], seq[ni]);
-                                assert!(tlt.between(seq[i], seq[pi], seq[ni]));
-                            }
-
                             // case 1
                             // [(a, b), (c, d)] -> [(a, c), (b, d)]
                             let gain1 = dist(ca, cb) + dist(cc, cd) - dist(ca, cc) - dist(cb, cd);
@@ -112,14 +102,6 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
                                 best_pat = NeighborPattern::Pat1((cd, ce));
                             }
 
-                            // case 3
-                            // [(a, b), (e, f)] -> [(a, e), (b, f)]
-                            let gain3 = dist(ca, cb) + dist(ce, cf) - dist(ca, ce) - dist(cb, cf);
-                            if gain3 > best_gain {
-                                best_gain = gain3;
-                                best_pat = NeighborPattern::Pat1((cf, ca));
-                            }
-
                             // case 4
                             // [(a, b), (c, d), (e, f)] -> [(a, c), (b, e), (d, f)]
                             // [(a, b), (c, d), (e, f)] -> [(a, c), (b, d), (e, f)] -> [(a, c), (b, e), (d, f)]
@@ -132,42 +114,28 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
                                 best_pat = NeighborPattern::Pat2((cb, cc), (cd, ce));
                             }
 
-                            if false {
-                                // case 5
-                                // [(a, b), (c, d), (e, f)] -> [(a, e), (d, b), (c, f)]
-                                // [(a, b), (c, d), (e, f)] -> [(a, e), (d, c), (b, f)] -> [(a, e), (d, b), (c, f)]
-                                let gain5 = dist(ca, cb) + dist(cc, cd) + dist(ce, cf)
-                                    - dist(ca, ce)
-                                    - dist(cd, cb)
-                                    - dist(cc, cf);
-                                if gain5 > best_gain {
-                                    best_gain = gain5;
-                                    best_pat = NeighborPattern::Pat2((cb, ce), (cc, cb));
-                                }
+                            // case 6
+                            // [(a, b), (c, d), (e, f)] -> [(a, d), (e, c), (b, f)]
+                            // [(a, b), (c, d), (e, f)] -> [(a, e), (d, c), (b, f)] -> [(a, d), (e, c), (b, f)]
+                            let gain6 = dist(ca, cb) + dist(cc, cd) + dist(ce, cf)
+                                - dist(ca, cd)
+                                - dist(ce, cc)
+                                - dist(cb, cf);
+                            if gain6 > best_gain {
+                                best_gain = gain6;
+                                best_pat = NeighborPattern::Pat2((cb, ce), (ce, cd));
+                            }
 
-                                // case 6
-                                // [(a, b), (c, d), (e, f)] -> [(a, d), (e, c), (b, f)]
-                                // [(a, b), (c, d), (e, f)] -> [(a, e), (d, c), (b, f)] -> [(a, d), (e, c), (b, f)]
-                                let gain6 = dist(ca, cb) + dist(cc, cd) + dist(ce, cf)
-                                    - dist(ca, cd)
-                                    - dist(ce, cc)
-                                    - dist(cb, cf);
-                                if gain6 > best_gain {
-                                    best_gain = gain6;
-                                    best_pat = NeighborPattern::Pat2((cb, ce), (ce, cd));
-                                }
-
-                                // case 7
-                                // [(a, b), (c, d), (e, f)] -> [(a, d), (e, b), (c, f)]
-                                // [(a, b), (c, d), (e, f)] -> [(a, e), (d, c), (b, f)] -> [(a, d), (e, c), (b, f)] -> [(a, d), (e, b), (c, f)]
-                                let gain7 = dist(ca, cb) + dist(cc, cd) + dist(ce, cf)
-                                    - dist(ca, cd)
-                                    - dist(ce, cb)
-                                    - dist(cc, cf);
-                                if gain7 > best_gain {
-                                    best_gain = gain7;
-                                    best_pat = NeighborPattern::Pat3((cb, ce), (ce, cd), (cc, cb));
-                                }
+                            // case 7
+                            // [(a, b), (c, d), (e, f)] -> [(a, d), (e, b), (c, f)]
+                            // [(a, b), (c, d), (e, f)] -> [(a, e), (d, c), (b, f)] -> [(a, d), (e, c), (b, f)] -> [(a, d), (e, b), (c, f)]
+                            let gain7 = dist(ca, cb) + dist(cc, cd) + dist(ce, cf)
+                                - dist(ca, cd)
+                                - dist(ce, cb)
+                                - dist(cc, cf);
+                            if gain7 > best_gain {
+                                best_gain = gain7;
+                                best_pat = NeighborPattern::Pat3((cb, ce), (ce, cd), (cc, cb));
                             }
 
                             selected.clear(e);
@@ -177,6 +145,65 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
 
                     selected.clear(c);
                     selected.clear(d);
+                }
+            }
+
+            // a-e をくっつけるとよさそう
+            for e in neighbor_table.neighbor_list(a) {
+                let e_next = tlt.next(*e);
+                let e_prev = tlt.prev(*e);
+
+                for (e, f) in [(e_prev, *e), (*e, e_next)] {
+                    if selected.test(e) || selected.test(f) {
+                        continue;
+                    }
+                    selected.set(e);
+                    selected.set(f);
+
+                    for c in neighbor_table.neighbor_list(f) {
+                        let c_next = tlt.next(*c);
+                        let c_prev = tlt.prev(*c);
+
+                        for (c, d) in [(c_prev, *c), (*c, c_next)] {
+                            if selected.test(c) || selected.test(d) {
+                                continue;
+                            }
+                            selected.set(c);
+                            selected.set(d);
+
+                            let dist = |i1, i2| distance.distance(i1, i2);
+
+                            let (ca, cb, cc, cd, ce, cf) = if tlt.between(c, a, e) {
+                                (a, b, c, d, e, f)
+                            } else {
+                                (a, b, e, f, c, d)
+                            };
+
+                            // case 3
+                            // [(a, b), (e, f)] -> [(a, e), (b, f)]
+                            let gain3 = dist(ca, cb) + dist(ce, cf) - dist(ca, ce) - dist(cb, cf);
+                            if gain3 > best_gain {
+                                best_gain = gain3;
+                                best_pat = NeighborPattern::Pat1((cf, ca));
+                            }
+
+                            // case 5
+                            // [(a, b), (c, d), (e, f)] -> [(a, e), (d, b), (c, f)]
+                            // [(a, b), (c, d), (e, f)] -> [(a, e), (d, c), (b, f)] -> [(a, e), (d, b), (c, f)]
+                            let gain5 = dist(ca, cb) + dist(cc, cd) + dist(ce, cf)
+                                - dist(ca, ce)
+                                - dist(cd, cb)
+                                - dist(cc, cf);
+                            if gain5 > best_gain {
+                                best_gain = gain5;
+                                best_pat = NeighborPattern::Pat2((cb, ce), (cc, cb));
+                            }
+                            selected.clear(c);
+                            selected.clear(d);
+                        }
+                    }
+                    selected.clear(e);
+                    selected.clear(f);
                 }
             }
 
@@ -214,18 +241,6 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
                 eval -= best_gain;
             }
         }
-
-        let after_eval = evaluate(distance, &tlt);
-        eprintln!("---");
-        eprintln!("pat: {:?}", best_pat);
-        eprintln!(
-            "eval: {} -> {} (gain = {}), re-eval: = {}",
-            (eval + best_gain),
-            eval,
-            best_gain,
-            after_eval
-        );
-        assert_eq!(eval, after_eval);
 
         if iter % (n / 100) == 0 || dlb.is_empty() {
             eprintln!("iter = {}, eval = {}", iter, eval);

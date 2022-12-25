@@ -270,22 +270,6 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
         }
     }
 
-    // 物理的な配置について、登場順序順に比較する
-    fn cmp(&self, id1: u32, id2: u32) -> Ordering {
-        let index1 = self
-            .segment_list
-            .index_of(self.index_of[id1 as usize].segment_id);
-        let inner_index1 = self.index_of[id1 as usize].inner_id;
-        let index2 = self
-            .segment_list
-            .index_of(self.index_of[id2 as usize].segment_id);
-        let inner_index2 = self.index_of[id2 as usize].inner_id;
-
-        let pair_index1 = (index1, inner_index1);
-        let pair_index2 = (index2, inner_index2);
-        pair_index1.cmp(&pair_index2)
-    }
-
     // [prev, id, next, ...] -> [..., prev] + [id, next, ...] として、分割された segment id の pair
     fn split(&mut self, id: u32) -> (u16, u16) {
         let index = self.index_of[id as usize];
@@ -424,6 +408,12 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
         self.segment_list.swap(from_segment_id, to_segment_id);
     }
 
+    fn inner_index(&self, id: u32) -> (u16, u16) {
+        let index = self.index_of[id as usize];
+        let segment_index = self.segment_list.index_of(index.segment_id);
+        (segment_index, index.inner_id)
+    }
+
     fn validate(&self) {
         self.segment_list.validate();
     }
@@ -469,16 +459,23 @@ impl<const N: usize> Solution for TwoLeveltreeSolution<N> {
     }
 
     fn between(&self, id: u32, from: u32, to: u32) -> bool {
-        match self.cmp(from, to) {
+        // from, id, to の buffer の位置 && 内部位置を求める
+        let from_index = self.inner_index(from);
+        let id_index = self.inner_index(id);
+        let to_index = self.inner_index(to);
+
+        match from_index.cmp(&to_index) {
             Ordering::Less => {
                 // from <= id <= to
-                self.cmp(from, id) != Ordering::Greater && self.cmp(id, to) != Ordering::Greater
+                from_index.cmp(&id_index) != Ordering::Greater
+                    && id_index.cmp(&to_index) != Ordering::Greater
             }
             Ordering::Equal => id == from,
             Ordering::Greater => {
                 // (to <= from <= id) or
                 // (id <= to <= from)
-                self.cmp(from, id) != Ordering::Less || self.cmp(id, to) != Ordering::Less
+                from_index.cmp(&id_index) != Ordering::Greater
+                    || id_index.cmp(&to_index) != Ordering::Greater
             }
         }
     }
@@ -824,5 +821,20 @@ mod tests {
         assert!(two_level_tree.between(80, 50, 20));
         assert!(two_level_tree.between(59, 55, 20));
         assert!(two_level_tree.between(15, 55, 20));
+    }
+
+    #[test]
+    fn test_between2() {
+        const SIZE: usize = 100;
+        let solution = ArraySolution::new(SIZE);
+        let two_level_tree = TwoLeveltreeSolution::<30>::new(&solution);
+
+        for i in 0..SIZE as u32 {
+            for j in 0..SIZE as u32 {
+                for k in 0..SIZE as u32 {
+                    assert_eq!(solution.between(i, j, k), two_level_tree.between(i, j, k));
+                }
+            }
+        }
     }
 }
