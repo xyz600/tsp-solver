@@ -20,4 +20,6 @@ pub trait Solution {
         }
         eprintln!("]");
     }
+
+    fn index_of(&self, id: u32) -> usize;
 }

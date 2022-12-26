@@ -9,6 +9,9 @@ struct Segment<const N: usize> {
     // 次に挿入する場所
     index: usize,
     reversed: bool,
+    // 1次元化した時に、先頭から数えて物理的に何番目に存在するかをメモする
+    // swap の度に更新して、 Solution::index_of(id) へ高速にこたえるために存在する
+    start_1d_index: usize,
 }
 
 impl<const N: usize> Segment<N> {
@@ -17,6 +20,7 @@ impl<const N: usize> Segment<N> {
             array: [0u32; N],
             index: 0,
             reversed: false,
+            start_1d_index: 0,
         }
     }
 
@@ -244,15 +248,16 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
         let mut index_of = vec![TwoLevelIndex::default(); len];
 
         // \sqrt{N} 個くらいの segment に分割して登録
-        let segment_size = (len as f64).sqrt().ceil() as usize;
-        let segment_capacity = std::u16::MAX.min(10 * segment_size as u16);
+        let no_segment = (len as f64).sqrt().ceil() as usize;
+        let segment_capacity = std::u16::MAX.min(10 * no_segment as u16);
         let mut segment_list = SegmentIDList::new(segment_capacity);
         let mut buffer = vec![Segment::<N>::new(); segment_capacity as usize];
 
         let mut node = 0;
-        for iter in 0..segment_size {
+        let mut accumulated_segment_size = 0;
+        for iter in 0..no_segment {
             let segment_id = segment_list.acquire_free_segment_id();
-            let segment_size = len * (iter + 1) / segment_size - len * iter / segment_size;
+            let segment_size = len * (iter + 1) / no_segment - len * iter / no_segment;
             assert!(segment_size < N);
             for inner_id in 0..segment_size as u16 {
                 buffer[segment_id as usize].push(node);
@@ -260,6 +265,8 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
                 index_of[node as usize].segment_id = segment_id;
                 node = sol.next(node as u32);
             }
+            buffer[segment_id as usize].start_1d_index = accumulated_segment_size;
+            accumulated_segment_size += segment_size;
             segment_list.push(segment_id as u16);
         }
 
@@ -557,10 +564,29 @@ impl<const N: usize> Solution for TwoLeveltreeSolution<N> {
                 }
             }
         }
+        // start_1d_index の再構築
+        let mut accumulated_segment_size = 0;
+        for segment_id in self.segment_list.content.iter() {
+            let segment_id = *segment_id as usize;
+            self.buffer[segment_id].start_1d_index = accumulated_segment_size;
+            accumulated_segment_size += self.buffer[segment_id].len();
+        }
     }
 
     fn len(&self) -> usize {
         self.index_of.len()
+    }
+
+    fn index_of(&self, id: u32) -> usize {
+        let id = id as usize;
+        let index = self.index_of[id];
+        let start_index = self.buffer[index.segment_id as usize].start_1d_index;
+        let segment_size = self.buffer[index.segment_id as usize].len();
+        if self.buffer[index.segment_id as usize].reversed {
+            start_index + segment_size - 1 - index.inner_id as usize
+        } else {
+            start_index + index.inner_id as usize
+        }
     }
 }
 
@@ -862,6 +888,21 @@ mod tests {
             let to = if from == to { to + 1 } else { to };
             solution.swap(from, to);
             two_level_tree.swap(from, to);
+        }
+    }
+
+    #[test]
+    fn test_index_of() {
+        // 今回は一致する条件で実験しているだけで、どのような操作を経ても ArraySolution と TwoLevelTree の状態が同じにはならない点に注意
+        const SIZE: usize = 101;
+        let mut solution = ArraySolution::new(SIZE);
+        let mut two_level_tree = TwoLeveltreeSolution::<30>::new(&solution);
+
+        solution.swap(25, 75);
+        two_level_tree.swap(25, 75);
+
+        for id in 0..SIZE as u32 {
+            assert_eq!(solution.index_of(id), two_level_tree.index_of(id));
         }
     }
 }
