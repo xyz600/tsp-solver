@@ -4,4 +4,6 @@ pub trait DistanceFunction {
 
     // 次元数を返す
     fn dimension(&self) -> u32;
+
+    fn name(&self) -> String;
 }

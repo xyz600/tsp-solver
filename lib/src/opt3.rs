@@ -1,3 +1,5 @@
+use std::{path::PathBuf, str::FromStr};
+
 use crate::{
     array_solution::ArraySolution, bitset::BitSet, distance::DistanceFunction, intset::IntSet,
     neighbor_table::NeighborTable, solution::Solution,
@@ -30,7 +32,15 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
 
     let mut tlt = TwoLeveltreeSolution::<1000>::new(&solution);
 
-    let neighbor_table = NeighborTable::new(distance, 50);
+    let cache_filepath = PathBuf::from_str(format!("{}.cache", distance.name()).as_str()).unwrap();
+    let neighbor_table = if cache_filepath.exists() {
+        NeighborTable::load(&cache_filepath)
+    } else {
+        let table = NeighborTable::new(distance, 5);
+        table.save(&cache_filepath);
+        table
+    };
+
     let mut rng = rand::thread_rng();
 
     let mut dlb = IntSet::new(n);
@@ -241,7 +251,7 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
             }
         }
 
-        if iter % (n / 100) == 0 || dlb.is_empty() {
+        if iter % (n / 10) == 0 || dlb.is_empty() {
             eprintln!("iter = {}, eval = {}", iter, eval);
             eprintln!("dlb size = {}", dlb.len());
         }

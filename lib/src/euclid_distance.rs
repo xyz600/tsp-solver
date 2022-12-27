@@ -22,6 +22,7 @@ impl Point {
 
 pub struct EuclidDistance {
     point_list: Vec<Point>,
+    name: String,
 }
 
 enum TSPLibFormatCode {
@@ -33,6 +34,7 @@ impl EuclidDistance {
     pub fn load_tsplib(filepath: &PathBuf) -> EuclidDistance {
         let f = File::open(filepath).unwrap();
         let reader = BufReader::new(f);
+        let name = filepath.file_name().unwrap().to_str().unwrap().to_string();
 
         let mut dimension = std::u32::MAX;
         let mut point_list = vec![];
@@ -65,7 +67,7 @@ impl EuclidDistance {
             }
         }
         assert_eq!(dimension as usize, point_list.len());
-        EuclidDistance { point_list }
+        EuclidDistance { point_list, name }
     }
 }
 
@@ -76,5 +78,9 @@ impl DistanceFunction for EuclidDistance {
 
     fn dimension(&self) -> u32 {
         self.point_list.len() as u32
+    }
+
+    fn name(&self) -> String {
+        self.name.to_string()
     }
 }
