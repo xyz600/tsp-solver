@@ -588,6 +588,26 @@ impl<const N: usize> Solution for TwoLeveltreeSolution<N> {
             start_index + index.inner_id as usize
         }
     }
+
+    fn id_of(&self, index: usize) -> u32 {
+        // どの segment に属しているかを二分探索
+        // start_index <= index を満たす buffer が知りたい
+        let mut left = 0 as usize;
+        let mut right = self.segment_list.len();
+        while right - left >= 2 {
+            let middle = (right + left) / 2;
+            let segment_id = self.segment_list.content[middle];
+            if self.buffer[segment_id as usize].start_1d_index <= index {
+                left = middle;
+            } else {
+                right = middle;
+            }
+        }
+        let segment_id = self.segment_list.content[left];
+        let inner_index = index - self.buffer[segment_id as usize].start_1d_index;
+        assert!(inner_index < self.buffer[segment_id as usize].len());
+        self.buffer[segment_id as usize].array[inner_index]
+    }
 }
 
 #[cfg(test)]
@@ -903,6 +923,17 @@ mod tests {
 
         for id in 0..SIZE as u32 {
             assert_eq!(solution.index_of(id), two_level_tree.index_of(id));
+        }
+    }
+
+    #[test]
+    fn test_id_of() {
+        const SIZE: usize = 101;
+        let solution = ArraySolution::new(SIZE);
+        let two_level_tree = TwoLeveltreeSolution::<30>::new(&solution);
+
+        for index in 0..SIZE {
+            assert_eq!(solution.id_of(index), two_level_tree.id_of(index));
         }
     }
 }

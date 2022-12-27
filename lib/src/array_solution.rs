@@ -85,6 +85,10 @@ impl Solution for ArraySolution {
     fn index_of(&self, id: u32) -> usize {
         self.index_of[id as usize] as usize
     }
+
+    fn id_of(&self, index: usize) -> u32 {
+        self.content[index]
+    }
 }
 
 #[cfg(test)]

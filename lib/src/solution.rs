@@ -22,4 +22,6 @@ pub trait Solution {
     }
 
     fn index_of(&self, id: u32) -> usize;
+
+    fn id_of(&self, index: usize) -> u32;
 }
