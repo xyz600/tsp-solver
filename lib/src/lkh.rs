@@ -1,5 +1,7 @@
 use std::{path::PathBuf, str::FromStr, time::Instant};
 
+use rand::Rng;
+
 use crate::{
     array_solution::ArraySolution, bitset::BitSet, distance::DistanceFunction, intset::IntSet,
     neighbor_table::NeighborTable, segment_tree::SegmentTree, solution::Solution,
@@ -158,7 +160,8 @@ pub fn solve(
     let mut eval = evaluate(distance, &solution);
     let mut selected = BitSet::new(n);
 
-    let mut start = Instant::now();
+    let mut global_best_eval = eval;
+    let mut global_best_solution = solution.clone();
 
     for iter in 0.. {
         let a = dlb.random_select(&mut rng);
@@ -223,20 +226,60 @@ pub fn solve(
             dlb.remove(a);
         }
 
-        if iter % 20 == 0 {
-            let end = Instant::now();
-            let elapsed = (end - start).as_millis();
-            if elapsed > 1000 {
-                eprintln!("-----");
-                eprintln!("iter: {}", iter);
-                eprintln!("best eval: {}", eval);
-                eprintln!("dlb size: {}", dlb.len());
-                start = end;
-            }
-        }
-
         if dlb.is_empty() {
-            break;
+            eprintln!("-----");
+            eprintln!("iter: {}", iter);
+            eprintln!("best eval: {}", eval);
+            eprintln!("dlb size: {}", dlb.len());
+
+            if global_best_eval > eval {
+                global_best_eval = eval;
+                global_best_solution.copy_from(&solution);
+            } else {
+                solution.copy_from(&global_best_solution);
+            }
+
+            // random 2-opt kick
+            // 近い部分のエッジを強制的に結ぶ kick
+            // どうせ kick するなら、ある点の近傍をたくさん kick した方が変化させる意味があるから、
+            // chain させる感じで変化をさせる。
+            let mut a = rng.gen_range(0..n as u32);
+            let mut b = solution.next(a);
+
+            let mut selected = BitSet::new(n);
+            selected.set(a);
+            selected.set(b);
+
+            for _step in 0..100 {
+                if neighbor_table
+                    .neighbor_list(a)
+                    .iter()
+                    .all(|v| selected.test(*v) || selected.test(solution.next(*v)))
+                {
+                    break;
+                }
+
+                let c_size = neighbor_table.neighbor_list(a).len();
+                let c_idx = rng.gen_range(0..c_size);
+                let mut c = neighbor_table.neighbor_list(a)[c_idx];
+                let mut d = solution.next(c);
+
+                while selected.test(c) || selected.test(d) {
+                    let c_idx = rng.gen_range(0..c_size);
+                    c = neighbor_table.neighbor_list(a)[c_idx];
+                    d = solution.next(c);
+                }
+                selected.set(c);
+                selected.set(d);
+
+                solution.swap(b, c);
+                for id in [a, b, c, d] {
+                    dlb.push(id);
+                }
+
+                (a, b) = (b, d);
+            }
+            eval = evaluate(distance, &solution);
         }
     }
     solution

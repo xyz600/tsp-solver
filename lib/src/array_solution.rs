@@ -32,6 +32,11 @@ impl ArraySolution {
 
         ArraySolution { content, index_of }
     }
+
+    pub fn copy_from(&mut self, other: &ArraySolution) {
+        self.content.copy_from_slice(&other.content);
+        self.index_of.copy_from_slice(&other.index_of);
+    }
 }
 
 impl Solution for ArraySolution {
