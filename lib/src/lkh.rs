@@ -1,14 +1,9 @@
-use std::{path::PathBuf, str::FromStr, thread::current, time::Instant};
+use std::{path::PathBuf, str::FromStr, time::Instant};
 
 use crate::{
-    array_solution::ArraySolution,
-    bitset::BitSet,
-    distance::DistanceFunction,
-    intset::IntSet,
-    neighbor_table::{self, NeighborTable},
-    segment_tree::SegmentTree,
-    solution::Solution,
-    two_level_tree_solution::{self, TwoLeveltreeSolution},
+    array_solution::ArraySolution, bitset::BitSet, distance::DistanceFunction, intset::IntSet,
+    neighbor_table::NeighborTable, segment_tree::SegmentTree, solution::Solution,
+    two_level_tree_solution::TwoLeveltreeSolution,
 };
 
 fn evaluate(distance: &impl DistanceFunction, solution: &impl Solution) -> i64 {
@@ -22,13 +17,13 @@ fn evaluate(distance: &impl DistanceFunction, solution: &impl Solution) -> i64 {
     sum
 }
 
-fn solve_inner<'a>(
+fn solve_inner<'a, T: Solution>(
     depth: usize,
     max_depth: usize,
     distance: &impl DistanceFunction,
     neighbor_table: &NeighborTable,
-    current_flip: &mut SegmentTree<'a, TwoLeveltreeSolution<1000>>,
-    best_flip: &mut SegmentTree<'a, TwoLeveltreeSolution<1000>>,
+    current_flip: &mut SegmentTree<'a, T>,
+    best_flip: &mut SegmentTree<'a, T>,
     edge_stack: &mut Vec<(u32, u32)>,
     gain: i64,
     best_gain: &mut i64,
@@ -43,13 +38,13 @@ fn solve_inner<'a>(
         return;
     }
 
-    fn check<'a>(
+    fn check<'a, T: Solution>(
         depth: usize,
         max_depth: usize,
         distance: &impl DistanceFunction,
         neighbor_table: &NeighborTable,
-        current_flip: &mut SegmentTree<'a, TwoLeveltreeSolution<1000>>,
-        best_flip: &mut SegmentTree<'a, TwoLeveltreeSolution<1000>>,
+        current_flip: &mut SegmentTree<'a, T>,
+        best_flip: &mut SegmentTree<'a, T>,
         edge_stack: &mut Vec<(u32, u32)>,
         gain: i64,
         best_gain: &mut i64,
@@ -140,11 +135,11 @@ fn solve_inner<'a>(
 }
 
 pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySolution {
-    let solution = ArraySolution::new(distance.dimension() as usize);
-
-    let n = solution.len();
+    let n = distance.dimension() as usize;
     // 解く
-    let mut tlt = TwoLeveltreeSolution::<1000>::new(&solution);
+    // let solution = ArraySolution::new(distance.dimension() as usize);
+    // let mut tlt = TwoLeveltreeSolution::<1000>::new(&solution);
+    let mut tlt = ArraySolution::new(distance.dimension() as usize);
 
     let cache_filepath = PathBuf::from_str(format!("{}.cache", distance.name()).as_str()).unwrap();
     let neighbor_table = if cache_filepath.exists() {
@@ -182,7 +177,7 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
             let mut edge_stack = vec![];
 
             // iterative deeping
-            for max_depth in 2..=5 {
+            for max_depth in 2..=6 {
                 for (a, b) in [(a_prev, a), (a, a_next)] {
                     selected.set(a);
                     selected.set(b);
@@ -228,17 +223,24 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
             dlb.remove(a);
         }
 
-        if iter % (n / 100) == 0 {
+        if iter % 100 == 0 {
             let end = Instant::now();
             let elapsed = (end - start).as_millis();
-            if elapsed > 10_000 {
+            if elapsed > 1000 {
+                eprintln!("-----");
                 eprintln!("iter: {}", iter);
                 eprintln!("best eval: {}", eval);
                 eprintln!("dlb size: {}", dlb.len());
                 start = end;
+
+                let exact_eval = evaluate(distance, &tlt);
+                assert_eq!(exact_eval, eval);
             }
         }
-    }
 
-    solution
+        if dlb.is_empty() {
+            break;
+        }
+    }
+    tlt
 }

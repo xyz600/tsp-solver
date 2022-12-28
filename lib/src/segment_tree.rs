@@ -124,14 +124,67 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{array_solution::ArraySolution, segment_tree::SegmentTree, solution::Solution};
+    use crate::{
+        array_solution::ArraySolution, segment_tree::SegmentTree, solution::Solution,
+        two_level_tree_solution::TwoLeveltreeSolution,
+    };
     use rand::{thread_rng, Rng};
 
     #[test]
-    fn test_segment_list() {
+    fn test_segment_list_array() {
         const SIZE: usize = 101;
         let mut solution = ArraySolution::new(SIZE);
         let solution2 = ArraySolution::new(SIZE);
+        let mut segment_tree = SegmentTree::new(&solution2);
+
+        let mut rng = thread_rng();
+
+        let mut range_list = vec![];
+        for _iter in 0..SIZE {
+            let from = rng.gen_range(0..SIZE as u32);
+            let to = rng.gen_range(0..SIZE as u32 - 1);
+            let to = if from == to { to + 1 } else { to };
+
+            range_list.push((from, to));
+        }
+        let range_list = range_list;
+
+        for &(from, to) in range_list.iter() {
+            solution.swap(from, to);
+            segment_tree.swap(from, to);
+
+            for index in 0..SIZE {
+                assert_eq!(solution.id_of(index), segment_tree.id_of(index));
+            }
+
+            for id in 0..SIZE as u32 {
+                assert_eq!(solution.next(id), segment_tree.next(id));
+                assert_eq!(solution.prev(id), segment_tree.prev(id));
+            }
+        }
+
+        for &(from, to) in range_list.iter().rev() {
+            solution.swap(to, from);
+            segment_tree.undo();
+
+            for index in 0..SIZE {
+                assert_eq!(solution.id_of(index), segment_tree.id_of(index));
+            }
+
+            for id in 0..SIZE as u32 {
+                assert_eq!(solution.next(id), segment_tree.next(id));
+                assert_eq!(solution.prev(id), segment_tree.prev(id));
+            }
+        }
+    }
+
+    #[test]
+    fn test_segment_list_tlt() {
+        const SIZE: usize = 101;
+        let sol_ref = ArraySolution::new(SIZE);
+
+        let mut solution = TwoLeveltreeSolution::<30>::new(&sol_ref);
+        let solution2 = TwoLeveltreeSolution::<30>::new(&sol_ref);
         let mut segment_tree = SegmentTree::new(&solution2);
 
         let mut rng = thread_rng();
