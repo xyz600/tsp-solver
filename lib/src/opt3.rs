@@ -26,8 +26,10 @@ enum NeighborPattern {
 }
 
 // https://en.wikipedia.org/wiki/3-opt
-pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySolution {
-    let solution = ArraySolution::new(distance.dimension() as usize);
+pub fn solve(
+    distance: &(impl DistanceFunction + std::marker::Sync),
+    mut solution: ArraySolution,
+) -> ArraySolution {
     let n = solution.len();
 
     let mut tlt = TwoLeveltreeSolution::<1000>::new(&solution);
@@ -259,5 +261,5 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
             break;
         }
     }
-    solution
+    tlt.to_array_solution()
 }

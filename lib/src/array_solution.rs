@@ -1,3 +1,5 @@
+use rand::seq::index;
+
 use crate::solution::Solution;
 
 #[derive(Clone, Debug)]
@@ -16,6 +18,19 @@ impl ArraySolution {
 
     pub fn len(&self) -> usize {
         self.content.len()
+    }
+
+    pub fn from_array(content: Vec<u32>) -> ArraySolution {
+        let mut index_of: Vec<u32> = vec![std::u32::MAX; content.len()];
+        for (idx, id) in content.iter().enumerate() {
+            index_of[*id as usize] = idx as u32;
+        }
+        // 全ての id が登録されている
+        for idx in 0..index_of.len() {
+            assert_ne!(index_of[idx], std::u32::MAX);
+        }
+
+        ArraySolution { content, index_of }
     }
 }
 

@@ -134,12 +134,12 @@ fn solve_inner<'a, T: Solution>(
     }
 }
 
-pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySolution {
+pub fn solve(
+    distance: &(impl DistanceFunction + std::marker::Sync),
+    mut solution: ArraySolution,
+) -> ArraySolution {
     let n = distance.dimension() as usize;
     // 解く
-    // let solution = ArraySolution::new(distance.dimension() as usize);
-    // let mut tlt = TwoLeveltreeSolution::<1000>::new(&solution);
-    let mut tlt = ArraySolution::new(distance.dimension() as usize);
 
     let cache_filepath = PathBuf::from_str(format!("{}.cache", distance.name()).as_str()).unwrap();
     let neighbor_table = if cache_filepath.exists() {
@@ -155,7 +155,7 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
     let mut dlb = IntSet::new(n);
     dlb.set_all();
 
-    let mut eval = evaluate(distance, &tlt);
+    let mut eval = evaluate(distance, &solution);
     let mut selected = BitSet::new(n);
 
     let mut start = Instant::now();
@@ -166,18 +166,18 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
         selected.clear_all();
 
         let diff = {
-            let mut current_tree = SegmentTree::new(&tlt);
-            let mut best_tree = SegmentTree::new(&tlt);
+            let mut current_tree = SegmentTree::new(&solution);
+            let mut best_tree = SegmentTree::new(&solution);
 
             let mut best_gain = 0;
 
-            let a_next = tlt.next(a);
-            let a_prev = tlt.prev(a);
+            let a_next = solution.next(a);
+            let a_prev = solution.prev(a);
 
             let mut edge_stack = vec![];
 
             // iterative deeping
-            for max_depth in 2..=6 {
+            for max_depth in 2..=5 {
                 for (a, b) in [(a_prev, a), (a, a_next)] {
                     selected.set(a);
                     selected.set(b);
@@ -215,7 +215,7 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
         if let Some((gain, edge_list)) = diff {
             eval -= gain;
             for (from, to) in edge_list.into_iter() {
-                tlt.swap(from, to);
+                solution.swap(from, to);
                 dlb.push(from);
                 dlb.push(to);
             }
@@ -223,7 +223,7 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
             dlb.remove(a);
         }
 
-        if iter % 100 == 0 {
+        if iter % 20 == 0 {
             let end = Instant::now();
             let elapsed = (end - start).as_millis();
             if elapsed > 1000 {
@@ -232,9 +232,6 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
                 eprintln!("best eval: {}", eval);
                 eprintln!("dlb size: {}", dlb.len());
                 start = end;
-
-                let exact_eval = evaluate(distance, &tlt);
-                assert_eq!(exact_eval, eval);
             }
         }
 
@@ -242,5 +239,5 @@ pub fn solve(distance: &(impl DistanceFunction + std::marker::Sync)) -> ArraySol
             break;
         }
     }
-    tlt
+    solution
 }

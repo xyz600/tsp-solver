@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
 
+use crate::array_solution::ArraySolution;
 use crate::solution::Solution;
 
 #[derive(Clone, Debug)]
@@ -430,6 +431,16 @@ impl<const N: usize> TwoLeveltreeSolution<N> {
 
     fn validate(&self) {
         self.segment_list.validate();
+    }
+
+    pub fn to_array_solution(&self) -> ArraySolution {
+        let mut content = vec![];
+        let mut id = 0;
+        for _iter in 0..self.len() {
+            content.push(id);
+            id = self.next(id);
+        }
+        ArraySolution::from_array(content)
     }
 }
 
