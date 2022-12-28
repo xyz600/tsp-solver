@@ -259,12 +259,14 @@ pub fn solve(
             selected.set(b);
 
             for _step in 0..100 {
-                if neighbor_table
+                while !neighbor_table
                     .neighbor_list(a)
                     .iter()
                     .all(|v| selected.test(*v) || selected.test(solution.next(*v)))
                 {
-                    break;
+                    let a_size = neighbor_table.neighbor_list(a).len();
+                    let a_idx = rng.gen_range(0..a_size);
+                    a = neighbor_table.neighbor_list(a)[a_idx];
                 }
 
                 let c_size = neighbor_table.neighbor_list(a).len();
