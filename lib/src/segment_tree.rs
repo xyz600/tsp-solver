@@ -1,5 +1,6 @@
 use crate::solution::Solution;
 
+#[derive(Clone, Debug)]
 pub struct SegmentTree<'a, T> {
     reference: &'a T,
     swap_id_list: Vec<(u32, u32)>,
@@ -24,6 +25,16 @@ where
         self.swap_index_list.pop();
     }
 
+    pub fn copy_from(&mut self, tree: &SegmentTree<'a, T>) {
+        self.swap_id_list.clear();
+        self.swap_index_list.clear();
+
+        for i in 0..tree.swap_id_list.len() {
+            self.swap_id_list.push(tree.swap_id_list[i]);
+            self.swap_index_list.push(tree.swap_index_list[i]);
+        }
+    }
+
     fn inner_swap(&self, index: usize, from: usize, to: usize) -> usize {
         if self.inner_between(index, from, to) {
             if from <= to {
@@ -43,6 +54,10 @@ where
         } else {
             from <= index || index <= to
         }
+    }
+
+    pub fn to_swap_list(self) -> Vec<(u32, u32)> {
+        self.swap_id_list
     }
 }
 

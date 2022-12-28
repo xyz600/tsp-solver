@@ -40,6 +40,16 @@ impl IntSet {
         self.index += 1;
     }
 
+    pub fn pop(&mut self) -> Option<u32> {
+        if self.is_empty() {
+            None
+        } else {
+            let last_id = self.array[self.index - 1];
+            self.remove(last_id);
+            Some(last_id)
+        }
+    }
+
     pub fn remove(&mut self, id: u32) {
         assert!(!self.is_empty());
         assert!(self.contains(id));

@@ -3,7 +3,7 @@ use std::ops::{Index, IndexMut};
 
 use crate::solution::Solution;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Segment<const N: usize> {
     array: [u32; N],
     // 次に挿入する場所
@@ -82,6 +82,7 @@ impl<const N: usize> IndexMut<usize> for Segment<N> {
     }
 }
 
+#[derive(Clone, Debug)]
 struct SegmentIDList {
     content: Vec<u16>,
     index_of: Vec<u16>,
@@ -227,12 +228,13 @@ impl SegmentIDList {
     }
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 struct TwoLevelIndex {
     segment_id: u16,
     inner_id: u16,
 }
 
+#[derive(Clone, Debug)]
 pub struct TwoLeveltreeSolution<const N: usize> {
     // segment の中身
     buffer: Vec<Segment<N>>,

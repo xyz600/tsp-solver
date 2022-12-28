@@ -1,5 +1,6 @@
 use crate::solution::Solution;
 
+#[derive(Clone, Debug)]
 pub struct ArraySolution {
     content: Vec<u32>,
     index_of: Vec<u32>,
