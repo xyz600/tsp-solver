@@ -239,6 +239,10 @@ pub fn solve(
 
         if dlb.is_empty() {
             eprintln!("-----");
+            eprintln!(
+                "step: {} (failcount: {})",
+                no_random_step, no_continuous_fail_count
+            );
             eprintln!("iter: {}", iter);
             eprintln!("best eval: {}", eval);
             eprintln!("dlb size: {}", dlb.len());
