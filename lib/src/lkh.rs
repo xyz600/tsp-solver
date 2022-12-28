@@ -1,6 +1,6 @@
 use std::{path::PathBuf, str::FromStr, time::Instant};
 
-use rand::Rng;
+use rand::{rngs::ThreadRng, Rng};
 
 use crate::{
     array_solution::ArraySolution, bitset::BitSet, distance::DistanceFunction, intset::IntSet,
@@ -30,6 +30,7 @@ fn solve_inner<'a, T: Solution>(
     gain: i64,
     best_gain: &mut i64,
     selected: &mut BitSet,
+    rng: &mut ThreadRng,
 ) {
     if depth == max_depth {
         // 評価して最も良いゲインのものを保存
@@ -55,6 +56,7 @@ fn solve_inner<'a, T: Solution>(
         t1: u32,
         f2: u32,
         t2: u32,
+        rng: &mut ThreadRng,
     ) {
         if selected.test(f2) || selected.test(t2) {
             return;
@@ -82,6 +84,7 @@ fn solve_inner<'a, T: Solution>(
                 gain + partial_gain,
                 best_gain,
                 selected,
+                rng,
             );
             edge_stack.pop();
         }
@@ -95,44 +98,48 @@ fn solve_inner<'a, T: Solution>(
     // from, to のどちらかに近い頂点を候補に入れたい
     let &(f1, t1) = edge_stack.last().unwrap();
 
-    for f2 in neighbor_table.neighbor_list(f1) {
-        let t2 = current_flip.next(*f2);
-        check(
-            depth,
-            max_depth,
-            distance,
-            neighbor_table,
-            current_flip,
-            best_flip,
-            edge_stack,
-            gain,
-            best_gain,
-            selected,
-            f1,
-            t1,
-            *f2,
-            t2,
-        );
-    }
-
-    for t2 in neighbor_table.neighbor_list(t1) {
-        let f2 = current_flip.prev(*t2);
-        check(
-            depth,
-            max_depth,
-            distance,
-            neighbor_table,
-            current_flip,
-            best_flip,
-            edge_stack,
-            gain,
-            best_gain,
-            selected,
-            f1,
-            t1,
-            f2,
-            *t2,
-        );
+    if rng.gen_bool(0.5) {
+        for f2 in neighbor_table.neighbor_list(f1) {
+            let t2 = current_flip.next(*f2);
+            check(
+                depth,
+                max_depth,
+                distance,
+                neighbor_table,
+                current_flip,
+                best_flip,
+                edge_stack,
+                gain,
+                best_gain,
+                selected,
+                f1,
+                t1,
+                *f2,
+                t2,
+                rng,
+            );
+        }
+    } else {
+        for t2 in neighbor_table.neighbor_list(t1) {
+            let f2 = current_flip.prev(*t2);
+            check(
+                depth,
+                max_depth,
+                distance,
+                neighbor_table,
+                current_flip,
+                best_flip,
+                edge_stack,
+                gain,
+                best_gain,
+                selected,
+                f1,
+                t1,
+                f2,
+                *t2,
+                rng,
+            );
+        }
     }
 }
 
@@ -180,7 +187,7 @@ pub fn solve(
             let mut edge_stack = vec![];
 
             // iterative deeping
-            for max_depth in 2..=5 {
+            for max_depth in 2..=6 {
                 for (a, b) in [(a_prev, a), (a, a_next)] {
                     selected.set(a);
                     selected.set(b);
@@ -197,6 +204,7 @@ pub fn solve(
                         0,
                         &mut best_gain,
                         &mut selected,
+                        &mut rng,
                     );
 
                     selected.clear(a);
