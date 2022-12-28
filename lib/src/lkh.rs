@@ -170,6 +170,9 @@ pub fn solve(
     let mut global_best_eval = eval;
     let mut global_best_solution = solution.clone();
 
+    let mut no_random_step = 30;
+    let mut no_continuous_fail_count = 0;
+
     for iter in 0.. {
         let a = dlb.random_select(&mut rng);
 
@@ -243,8 +246,15 @@ pub fn solve(
             if global_best_eval > eval {
                 global_best_eval = eval;
                 global_best_solution.copy_from(&solution);
+                no_continuous_fail_count = 0;
             } else {
                 solution.copy_from(&global_best_solution);
+                no_continuous_fail_count += 1;
+            }
+
+            if no_continuous_fail_count == 100 {
+                no_random_step = (n / 10).min(no_random_step + 10);
+                no_continuous_fail_count = 0;
             }
 
             // random 2-opt kick
@@ -258,8 +268,8 @@ pub fn solve(
             selected.set(a);
             selected.set(b);
 
-            for _step in 0..100 {
-                while !neighbor_table
+            for _step in 0..no_random_step {
+                while neighbor_table
                     .neighbor_list(a)
                     .iter()
                     .all(|v| selected.test(*v) || selected.test(solution.next(*v)))
