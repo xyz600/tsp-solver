@@ -73,7 +73,7 @@ fn main() {
             DivideAndConqureConfig {
                 no_split: 12,
                 debug: false,
-                time_ms: time_ms,
+                time_ms,
                 start_kick_step,
                 kick_step_diff: 10,
                 end_kick_step: distance.dimension() as usize / 10,
@@ -90,8 +90,26 @@ fn main() {
         }
         best_eval = eval;
 
-        if start_kick_step == 1000 {
+        if start_kick_step == 100 {
             break;
         }
     }
+
+    let mut solution = lkh::solve(
+        &distance,
+        solution,
+        LKHConfig {
+            use_neighbor_cache: true,
+            cache_filepath: PathBuf::from_str(cache_filepath.as_str()).unwrap(),
+            debug: false,
+            time_ms: 24 * 60 * 60 * 1_000,
+            start_kick_step: 30,
+            kick_step_diff: 10,
+            end_kick_step: distance.dimension() as usize / 10,
+            fail_count_threashold: 50,
+            max_depth: 7,
+        },
+    );
+    eprintln!("finish initial lkh.");
+    eprintln!("eval = {}", evaluate(&distance, &solution));
 }
