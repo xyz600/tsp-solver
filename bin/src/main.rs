@@ -6,7 +6,7 @@ use clap::Parser;
 use lib::{
     array_solution::ArraySolution,
     distance::DistanceFunction,
-    divide_and_conqure_solver,
+    divide_and_conqure_solver::{self, DivideAndConqureConfig},
     euclid_distance::EuclidDistance,
     evaluate::evaluate,
     lkh::{self, LKHConfig},
@@ -76,9 +76,29 @@ fn main() {
 
     // 分割して並列化
 
+    let mut best_eval = evaluate(&distance, &solution);
+    let mut time_ms = 120_000;
+
     for iter in 1.. {
-        solution = divide_and_conqure_solver::solve(&distance, &solution);
+        solution = divide_and_conqure_solver::solve(
+            &distance,
+            &solution,
+            DivideAndConqureConfig {
+                debug: false,
+                time_ms,
+                start_kick_step: 30,
+                kick_step_diff: 10,
+                end_kick_step: distance.dimension() as usize / 10,
+                fail_count_threashold: 50,
+                max_depth: 6,
+            },
+        );
+        let eval = evaluate(&distance, &solution);
         eprintln!("finish splited lkh {} times.", iter);
-        eprintln!("eval = {}", evaluate(&distance, &solution));
+        eprintln!("eval = {}", eval);
+        if best_eval == eval {
+            time_ms += 120_000;
+        }
+        best_eval = eval;
     }
 }

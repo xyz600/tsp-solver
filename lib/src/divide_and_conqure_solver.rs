@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use crate::{
     array_solution::ArraySolution,
     distance::DistanceFunction,
+    divide_and_conqure_solver,
     lkh::{self, LKHConfig},
     solution::Solution,
 };
@@ -56,10 +57,21 @@ impl<'a, T: DistanceFunction> DistanceFunction for DividedDistance<'a, T> {
     }
 }
 
+pub struct DivideAndConqureConfig {
+    pub debug: bool,
+    pub time_ms: u128,
+    pub start_kick_step: usize,
+    pub kick_step_diff: usize,
+    pub end_kick_step: usize,
+    pub fail_count_threashold: u32,
+    pub max_depth: usize,
+}
+
 // スレッド数で問題を分割して、最終的に統合
 pub fn solve(
     distance: &(impl DistanceFunction + std::marker::Sync),
     solution: &impl Solution,
+    config: DivideAndConqureConfig,
 ) -> ArraySolution {
     const NO_SPLIT: u32 = 12;
 
@@ -91,13 +103,13 @@ pub fn solve(
             LKHConfig {
                 use_neighbor_cache: false,
                 cache_filepath: PathBuf::new(),
-                debug: false,
-                time_ms: 120_000,
-                start_kick_step: 10,
-                kick_step_diff: 10,
-                end_kick_step: partial_distance.dimension() as usize / 10,
-                fail_count_threashold: 50,
-                max_depth: 6,
+                debug: config.debug,
+                time_ms: config.time_ms,
+                start_kick_step: config.start_kick_step,
+                kick_step_diff: config.kick_step_diff,
+                end_kick_step: config.end_kick_step,
+                fail_count_threashold: config.fail_count_threashold,
+                max_depth: config.max_depth,
             },
         );
 
