@@ -16,7 +16,7 @@ impl Point {
     pub fn distance(&self, other: &Point) -> i64 {
         let dy = self.y.abs_diff(other.y) as i64;
         let dx = self.x.abs_diff(other.x) as i64;
-        ((dy * dy + dx * dx) as f64).sqrt().ceil() as i64
+        ((dy * dy + dx * dx) as f64).sqrt().round() as i64
     }
 }
 

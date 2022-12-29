@@ -30,20 +30,6 @@ fn main() {
 
     let cache_filepath = get_default_cache_filepath(&distance);
 
-    // ある程度いい初期解を作る
-    // 解を分割する時に変な分割になってしまうため
-    let solution = opt2::solve(
-        &distance,
-        solution,
-        Opt2Config {
-            use_neighbor_cache: true,
-            cache_filepath: PathBuf::from_str(cache_filepath.as_str()).unwrap(),
-            debug: false,
-        },
-    );
-    eprintln!("finish 2-opt.");
-    eprintln!("eval = {}", evaluate(&distance, &solution));
-
     let solution = opt3::solve(
         &distance,
         solution,
@@ -77,28 +63,35 @@ fn main() {
     // 分割して並列化
 
     let mut best_eval = evaluate(&distance, &solution);
-    let mut time_ms = 120_000;
+    let mut start_kick_step = 30;
+    let mut time_ms = 30_000;
 
     for iter in 1.. {
         solution = divide_and_conqure_solver::solve(
             &distance,
             &solution,
             DivideAndConqureConfig {
+                no_split: 12,
                 debug: false,
-                time_ms,
-                start_kick_step: 30,
+                time_ms: time_ms,
+                start_kick_step,
                 kick_step_diff: 10,
                 end_kick_step: distance.dimension() as usize / 10,
                 fail_count_threashold: 50,
-                max_depth: 6,
+                max_depth: 7,
             },
         );
         let eval = evaluate(&distance, &solution);
         eprintln!("finish splited lkh {} times.", iter);
         eprintln!("eval = {}", eval);
         if best_eval == eval {
-            time_ms += 120_000;
+            start_kick_step += 10;
+            time_ms += 30_000;
         }
         best_eval = eval;
+
+        if start_kick_step == 1000 {
+            break;
+        }
     }
 }

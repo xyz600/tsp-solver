@@ -58,6 +58,7 @@ impl<'a, T: DistanceFunction> DistanceFunction for DividedDistance<'a, T> {
 }
 
 pub struct DivideAndConqureConfig {
+    pub no_split: u32,
     pub debug: bool,
     pub time_ms: u128,
     pub start_kick_step: usize,
@@ -73,15 +74,13 @@ pub fn solve(
     solution: &impl Solution,
     config: DivideAndConqureConfig,
 ) -> ArraySolution {
-    const NO_SPLIT: u32 = 12;
-
     let mut rng = thread_rng();
     let mut id = rng.gen_range(0..distance.dimension());
-    let mut vertex_list = vec![vec![]; NO_SPLIT as usize];
+    let mut vertex_list = vec![vec![]; config.no_split as usize];
     // 振り分け
-    for no_segment in 0..NO_SPLIT {
-        let segment_len = distance.dimension() * (no_segment + 1) / NO_SPLIT
-            - distance.dimension() * no_segment / NO_SPLIT;
+    for no_segment in 0..config.no_split {
+        let segment_len = distance.dimension() * (no_segment + 1) / config.no_split
+            - distance.dimension() * no_segment / config.no_split;
         for _iter in 0..segment_len {
             vertex_list[no_segment as usize].push(id);
             id = solution.next(id);
