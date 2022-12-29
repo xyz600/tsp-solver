@@ -2,6 +2,7 @@ pub mod array_solution;
 mod bitset;
 pub mod distance;
 pub mod euclid_distance;
+pub mod evaluate;
 mod intset;
 pub mod lkh;
 mod neighbor_table;

@@ -1,23 +1,11 @@
-use std::{path::PathBuf, str::FromStr, time::Instant};
+use std::{path::PathBuf, time::Instant};
 
 use rand::{rngs::ThreadRng, Rng};
 
 use crate::{
-    array_solution::ArraySolution, bitset::BitSet, distance::DistanceFunction, intset::IntSet,
-    neighbor_table::NeighborTable, segment_tree::SegmentTree, solution::Solution,
-    two_level_tree_solution::TwoLeveltreeSolution,
+    array_solution::ArraySolution, bitset::BitSet, distance::DistanceFunction, evaluate::evaluate,
+    intset::IntSet, neighbor_table::NeighborTable, segment_tree::SegmentTree, solution::Solution,
 };
-
-fn evaluate(distance: &impl DistanceFunction, solution: &impl Solution) -> i64 {
-    let mut sum = 0;
-    let mut id = 0;
-    for _iter in 0..distance.dimension() {
-        let next = solution.next(id);
-        sum += distance.distance(id, next);
-        id = next;
-    }
-    sum
-}
 
 fn solve_inner<'a, T: Solution>(
     depth: usize,
@@ -143,19 +131,33 @@ fn solve_inner<'a, T: Solution>(
     }
 }
 
+pub struct LKHConfig {
+    pub use_neighbor_cache: bool,
+    pub cache_filepath: PathBuf,
+    pub debug: bool,
+    pub time_ms: u128,
+    pub start_kick_step: usize,
+    pub kick_step_diff: usize,
+    pub end_kick_step: usize,
+    pub fail_count_threashold: u32,
+    pub max_depth: usize,
+}
+
 pub fn solve(
     distance: &(impl DistanceFunction + std::marker::Sync),
     mut solution: ArraySolution,
+    config: LKHConfig,
 ) -> ArraySolution {
     let n = distance.dimension() as usize;
     // 解く
 
-    let cache_filepath = PathBuf::from_str(format!("{}.cache", distance.name()).as_str()).unwrap();
-    let neighbor_table = if cache_filepath.exists() {
-        NeighborTable::load(&cache_filepath)
+    let start = Instant::now();
+
+    let neighbor_table = if config.use_neighbor_cache && config.cache_filepath.exists() {
+        NeighborTable::load(&config.cache_filepath)
     } else {
         let table = NeighborTable::new(distance, 5);
-        table.save(&cache_filepath);
+        table.save(&config.cache_filepath);
         table
     };
 
@@ -170,7 +172,7 @@ pub fn solve(
     let mut global_best_eval = eval;
     let mut global_best_solution = solution.clone();
 
-    let mut no_random_step = 30;
+    let mut no_random_step = config.start_kick_step;
     let mut no_continuous_fail_count = 0;
 
     for iter in 0.. {
@@ -190,7 +192,7 @@ pub fn solve(
             let mut edge_stack = vec![];
 
             // iterative deeping
-            for max_depth in 2..=6 {
+            for max_depth in 2..=config.max_depth {
                 for (a, b) in [(a_prev, a), (a, a_next)] {
                     selected.set(a);
                     selected.set(b);
@@ -238,14 +240,16 @@ pub fn solve(
         }
 
         if dlb.is_empty() {
-            eprintln!("-----");
-            eprintln!(
-                "step: {} (failcount: {})",
-                no_random_step, no_continuous_fail_count
-            );
-            eprintln!("iter: {}", iter);
-            eprintln!("best eval: {}", eval);
-            eprintln!("dlb size: {}", dlb.len());
+            if config.debug {
+                eprintln!("-----");
+                eprintln!(
+                    "step: {} (failcount: {})",
+                    no_random_step, no_continuous_fail_count
+                );
+                eprintln!("iter: {}", iter);
+                eprintln!("best eval: {}", eval);
+                eprintln!("dlb size: {}", dlb.len());
+            }
 
             if global_best_eval > eval {
                 global_best_eval = eval;
@@ -256,8 +260,8 @@ pub fn solve(
                 no_continuous_fail_count += 1;
             }
 
-            if no_continuous_fail_count == 100 {
-                no_random_step = (n / 10).min(no_random_step + 10);
+            if no_continuous_fail_count == config.fail_count_threashold {
+                no_random_step = (config.end_kick_step).min(no_random_step + config.kick_step_diff);
                 no_continuous_fail_count = 0;
             }
 
@@ -304,7 +308,12 @@ pub fn solve(
                 (a, b) = (b, d);
             }
             eval = evaluate(distance, &solution);
+
+            let end = Instant::now();
+            if (end - start).as_millis() > config.time_ms {
+                break;
+            }
         }
     }
-    solution
+    global_best_solution
 }

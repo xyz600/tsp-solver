@@ -1,36 +1,31 @@
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
 
 use crate::{
-    array_solution::ArraySolution, distance::DistanceFunction, intset::IntSet,
+    array_solution::ArraySolution, distance::DistanceFunction, evaluate::evaluate, intset::IntSet,
     neighbor_table::NeighborTable, solution::Solution,
     two_level_tree_solution::TwoLeveltreeSolution,
 };
 
-fn evaluate(distance: &impl DistanceFunction, solution: &impl Solution) -> i64 {
-    let mut sum = 0;
-    let mut id = 0;
-    for _iter in 0..distance.dimension() {
-        let next = solution.next(id);
-        sum += distance.distance(id, next);
-        id = next;
-    }
-    sum
+pub struct Opt2Config {
+    pub use_neighbor_cache: bool,
+    pub cache_filepath: PathBuf,
+    pub debug: bool,
 }
 
 pub fn solve(
     distance: &(impl DistanceFunction + std::marker::Sync),
-    mut solution: ArraySolution,
+    solution: ArraySolution,
+    config: Opt2Config,
 ) -> ArraySolution {
     let n = solution.len();
 
     let mut tlt = TwoLeveltreeSolution::<1000>::new(&solution);
 
-    let cache_filepath = PathBuf::from_str(format!("{}.cache", distance.name()).as_str()).unwrap();
-    let neighbor_table = if cache_filepath.exists() {
-        NeighborTable::load(&cache_filepath)
+    let neighbor_table = if config.use_neighbor_cache && config.cache_filepath.exists() {
+        NeighborTable::load(&config.cache_filepath)
     } else {
         let table = NeighborTable::new(distance, 5);
-        table.save(&cache_filepath);
+        table.save(&config.cache_filepath);
         table
     };
 
@@ -76,7 +71,7 @@ pub fn solve(
             dlb.remove(a);
         }
 
-        if iter % n == 0 || dlb.is_empty() {
+        if config.debug && (iter % n == 0 || dlb.is_empty()) {
             eprintln!("iter = {}, eval = {}", iter, eval);
             eprintln!("dlb size = {}", dlb.len());
         }
