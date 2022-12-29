@@ -25,7 +25,9 @@ pub fn solve(
         NeighborTable::load(&config.cache_filepath)
     } else {
         let table = NeighborTable::new(distance, 5);
-        table.save(&config.cache_filepath);
+        if config.use_neighbor_cache {
+            table.save(&config.cache_filepath);
+        }
         table
     };
 

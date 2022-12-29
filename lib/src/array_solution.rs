@@ -1,5 +1,3 @@
-use rand::seq::index;
-
 use crate::solution::Solution;
 
 #[derive(Clone, Debug)]

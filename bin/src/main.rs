@@ -6,6 +6,7 @@ use clap::Parser;
 use lib::{
     array_solution::ArraySolution,
     distance::DistanceFunction,
+    divide_and_conqure_solver,
     euclid_distance::EuclidDistance,
     evaluate::evaluate,
     lkh::{self, LKHConfig},
@@ -29,6 +30,8 @@ fn main() {
 
     let cache_filepath = get_default_cache_filepath(&distance);
 
+    // ある程度いい初期解を作る
+    // 解を分割する時に変な分割になってしまうため
     let solution = opt2::solve(
         &distance,
         solution,
@@ -53,14 +56,14 @@ fn main() {
     eprintln!("finish 3-opt.");
     eprintln!("eval = {}", evaluate(&distance, &solution));
 
-    let solution = lkh::solve(
+    let mut solution = lkh::solve(
         &distance,
         solution,
         LKHConfig {
             use_neighbor_cache: true,
             cache_filepath: PathBuf::from_str(cache_filepath.as_str()).unwrap(),
             debug: false,
-            time_ms: 120_000,
+            time_ms: 60_000,
             start_kick_step: 30,
             kick_step_diff: 10,
             end_kick_step: distance.dimension() as usize / 10,
@@ -68,6 +71,14 @@ fn main() {
             max_depth: 6,
         },
     );
-    eprintln!("finish lkh.");
+    eprintln!("finish initial lkh.");
     eprintln!("eval = {}", evaluate(&distance, &solution));
+
+    // 分割して並列化
+
+    for iter in 1.. {
+        solution = divide_and_conqure_solver::solve(&distance, &solution);
+        eprintln!("finish splited lkh {} times.", iter);
+        eprintln!("eval = {}", evaluate(&distance, &solution));
+    }
 }
